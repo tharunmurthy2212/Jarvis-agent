@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIS // Mark LXXXV Autonomous Command Interface</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #040810;
+      --bg-panel: rgba(8, 16, 32, 0.75);
+      --bg-panel-hover: rgba(14, 28, 54, 0.85);
+      --cyan-bright: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.45);
+      --cyan-dim: rgba(0, 240, 255, 0.15);
+      --amber-gold: #ffb703;
+      --amber-glow: rgba(255, 183, 3, 0.4);
+      --emerald: #00ff88;
+      --crimson: #ff2e5b;
+      --border-hud: rgba(0, 240, 255, 0.28);
+      --border-hud-bright: rgba(0, 240, 255, 0.7);
+      --text-primary: #e6f7ff;
+      --text-muted: #6a8ba6;
+      --text-dim: #38556f;
+      --font-hud: 'Orbitron', monospace;
+      --font-tech: 'Rajdhani', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: var(--font-tech);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Scanlines and Hex Mesh Overlay */
+    body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: 
+        radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.05) 0%, transparent 70%),
+        linear-gradient(rgba(0, 240, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    body::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Ambient Background Canvas */
+    #bg-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      opacity: 0.65;
+    }
+
+    /* HUD Corner Brackets */
+    .hud-frame {
+      position: absolute;
+      inset: 8px;
+      border: 1px solid rgba(0, 240, 255, 0.12);
+      pointer-events: none;
+      z-index: 5;
+    }
+    .hud-frame::before, .hud-frame::after {
+      content: "";
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-color: var(--cyan-bright);
+      border-style: solid;
+    }
+    .hud-frame::before {
+      top: -2px;
+      left: -2px;
+      border-width: 3px 0 0 3px;
+    }
+    .hud-frame::after {
+      bottom: -2px;
+      right: -2px;
+      border-width: 0 3px 3px 0;
+    }
+
+    /* HEADER */
+    header {
+      position: relative;
+      z-index: 10;
+      height: 64px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-hud);
+      background: linear-gradient(180deg, rgba(8, 20, 38, 0.85) 0%, rgba(4, 10, 20, 0.7) 100%);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--cyan-bright);
+      box-shadow: 0 0 12px var(--cyan-glow), inset 0 0 8px var(--cyan-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      animation: reactorSpin 16s linear infinite;
+    }
+    .brand-logo::after {
+      content: "";
+      width: 12px;
+      height: 12px;
+      background: var(--cyan-bright);
+      border-radius: 50%;
+      box-shadow: 0 0 10px #fff;
+    }
+    .brand-text h1 {
+      font-family: var(--font-hud);
+      font-size: 1.25rem;
+      letter-spacing: 3px;
+      color: #fff;
+      text-shadow: 0 0 10px var(--cyan-glow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-text span.version {
+      font-size: 0.65rem;
+      background: var(--cyan-dim);
+      border: 1px solid var(--cyan-bright);
+      color: var(--cyan-bright);
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+    .brand-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .header-telemetry {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .telemetry-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+    }
+    .telemetry-chip .label {
+      color: var(--text-muted);
+      font-size: 0.62rem;
+      letter-spacing: 1px;
+    }
+    .telemetry-chip .val {
+      color: var(--cyan-bright);
+      font-weight: 600;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 4px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid var(--border-hud);
+      font-family: var(--font-hud);
+      font-size: 0.75rem;
+      letter-spacing: 1.5px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulseGreen 2s infinite ease-in-out;
+    }
+    .btn-hud {
+      background: transparent;
+      border: 1px solid var(--border-hud);
+      color: var(--cyan-bright);
+      padding: 7px 14px;
+      font-family: var(--font-hud);
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .btn-hud:hover {
+      background: var(--cyan-dim);
+      border-color: var(--cyan-bright);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    /* MAIN WORKSPACE LAYOUT */
+    main {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 360px 1fr 340px;
+      gap: 16px;
+      padding: 16px 20px;
+      overflow: hidden;
+    }
+
+    /* HUD PANELS */
+    .hud-panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-hud);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+      box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.03), 0 8px 32px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+    .hud-panel::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan-bright), transparent);
+    }
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 240, 255, 0.03);
+    }
+    .panel-header h2 {
+      font-family: var(--font-hud);
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      color: var(--cyan-bright);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--amber-gold);
+      border: 1px solid rgba(255, 183, 3, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    /* LEFT COLUMN: ARC REACTOR & DIAGNOSTICS */
+    .reactor-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 12px;
+      position: relative;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.12);
+    }
+    #arc-reactor {
+      width: 220px;
+      height: 220px;
+      cursor: pointer;
+    }
+    .reactor-status-text {
+      margin-top: 10px;
+      font-family: var(--font-hud);
+      font-size: 0.85rem;
+      color: var(--cyan-bright);
+      letter-spacing: 2px;
+      text-shadow: 0 0 8px var(--cyan-glow);
+    }
+    .reactor-subtext {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .gauges-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.12);
+    }
+    .gauge-card {
+      background: rgba(0, 240, 255, 0.03);
+      border: 1px solid rgba(0, 240, 255, 0.12);
+      border-radius: 4px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .gauge-label {
+      font-size: 0.65rem;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .gauge-val {
+      font-family: var(--font-mono);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .gauge-bar-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .gauge-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan-bright), var(--emerald));
+      width: 28%;
+      transition: width 0.5s ease;
+      box-shadow: 0 0 6px var(--cyan-glow);
+    }
+
+    /* TOOLS MATRIX */
+    .tools-section {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tool-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 4px;
+      background: rgba(0, 240, 255, 0.02);
+      border: 1px solid rgba(0, 240, 255, 0.08);
+      font-size: 0.8rem;
+      transition: all 0.2s ease;
+    }
+    .tool-row:hover {
+      border-color: var(--border-hud-bright);
+      background: rgba(0, 240, 255, 0.06);
+    }
+    .tool-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .tool-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cyan-bright);
+      box-shadow: 0 0 6px var(--cyan-bright);
+    }
+    .tool-name {
+      font-family: var(--font-hud);
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+    }
+    .tool-state {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--emerald);
+    }
+
+    /* CENTER COLUMN: TACTICAL CHAT STREAM */
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .chat-messages {
+      flex: 1;
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+    .chat-messages::-webkit-scrollbar {
+      width: 5px;
+    }
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: var(--border-hud);
+      border-radius: 3px;
+    }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      max-width: 82%;
+      position: relative;
+      animation: msgAppear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .msg-user {
+      align-self: flex-end;
+    }
+    .msg-assistant {
+      align-self: flex-start;
+    }
+
+    .msg-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+    }
+    .msg-user .msg-meta {
+      justify-content: flex-end;
+    }
+    .msg-tag {
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-weight: 700;
+    }
+    .msg-user .msg-tag {
+      background: rgba(255, 183, 3, 0.15);
+      color: var(--amber-gold);
+      border: 1px solid rgba(255, 183, 3, 0.4);
+    }
+    .msg-assistant .msg-tag {
+      background: var(--cyan-dim);
+      color: var(--cyan-bright);
+      border: 1px solid var(--border-hud-bright);
+    }
+
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      user-select: text;
+      position: relative;
+    }
+    .msg-user .msg-bubble {
+      background: linear-gradient(135deg, rgba(20, 36, 60, 0.9), rgba(12, 22, 38, 0.9));
+      border: 1px solid rgba(255, 183, 3, 0.3);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      color: #fff;
+    }
+    .msg-assistant .msg-bubble {
+      background: linear-gradient(135deg, rgba(8, 24, 46, 0.9), rgba(4, 14, 28, 0.9));
+      border: 1px solid var(--border-hud);
+      box-shadow: 0 4px 20px rgba(0, 240, 255, 0.08);
+      color: var(--text-primary);
+    }
+
+    /* Tool execution callout in bubble */
+    .tool-execution-pill {
+      margin-top: 8px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      background: rgba(0, 240, 255, 0.06);
+      border-left: 3px solid var(--cyan-bright);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--cyan-bright);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Audio wave canvas */
+    #audio-visualizer {
+      width: 100%;
+      height: 28px;
+      background: rgba(0, 0, 0, 0.4);
+      border-top: 1px solid rgba(0, 240, 255, 0.12);
+    }
+
+    /* QUICK CHIPS */
+    .quick-chips {
+      display: flex;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(4, 10, 20, 0.6);
+      border-top: 1px solid rgba(0, 240, 255, 0.1);
+      overflow-x: auto;
+    }
+    .quick-chips::-webkit-scrollbar {
+      display: none;
+    }
+    .chip {
+      white-space: nowrap;
+      padding: 5px 12px;
+      border-radius: 12px;
+      background: rgba(0, 240, 255, 0.04);
+      border: 1px solid rgba(0, 240, 255, 0.18);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .chip:hover {
+      background: var(--cyan-dim);
+      border-color: var(--cyan-bright);
+      color: var(--cyan-bright);
+    }
+
+    /* INPUT ZONE */
+    .chat-input-bar {
+      padding: 14px 16px;
+      background: rgba(6, 14, 28, 0.95);
+      border-top: 1px solid var(--border-hud);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+    .chat-input-wrapper {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .chat-input {
+      width: 100%;
+      background: rgba(3, 8, 16, 0.8);
+      border: 1px solid var(--border-hud);
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: #fff;
+      font-family: var(--font-tech);
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.2s ease;
+      user-select: text;
+    }
+    .chat-input:focus {
+      border-color: var(--cyan-bright);
+      box-shadow: 0 0 16px var(--cyan-glow);
+    }
+    .btn-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--border-hud);
+      background: rgba(0, 240, 255, 0.05);
+      color: var(--cyan-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .btn-circle:hover {
+      background: var(--cyan-dim);
+      border-color: var(--cyan-bright);
+      box-shadow: 0 0 14px var(--cyan-glow);
+    }
+    .btn-circle.recording {
+      background: rgba(255, 46, 91, 0.2);
+      border-color: var(--crimson);
+      color: var(--crimson);
+      animation: pulseRed 1s infinite alternate;
+    }
+    .btn-send {
+      padding: 0 20px;
+      height: 44px;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 180, 255, 0.4));
+      border: 1px solid var(--cyan-bright);
+      color: #fff;
+      font-family: var(--font-hud);
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 12px var(--cyan-glow);
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .btn-send:hover {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.4), rgba(0, 200, 255, 0.6));
+      box-shadow: 0 0 20px var(--cyan-glow);
+    }
+
+    /* RIGHT COLUMN: KNOWLEDGE & MEMORY VAULT */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .doc-dropzone {
+      border: 2px dashed rgba(0, 240, 255, 0.3);
+      border-radius: 6px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+      background: rgba(0, 240, 255, 0.02);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .doc-dropzone:hover, .doc-dropzone.dragover {
+      border-color: var(--cyan-bright);
+      background: var(--cyan-dim);
+      box-shadow: 0 0 16px var(--cyan-glow);
+    }
+    .doc-dropzone p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .doc-dropzone span.sub {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+    }
+
+    .memory-list {
+      flex: 1;
+      padding: 12px 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .memory-card {
+      padding: 8px 12px;
+      border-radius: 4px;
+      background: rgba(0, 240, 255, 0.03);
+      border: 1px solid rgba(0, 240, 255, 0.1);
+      font-size: 0.78rem;
+    }
+    .memory-card-header {
+      display: flex;
+      justify-content: space-between;
+      color: var(--amber-gold);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      margin-bottom: 4px;
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-box {
+      width: 500px;
+      background: var(--bg-panel);
+      border: 1px solid var(--cyan-bright);
+      box-shadow: 0 0 30px var(--cyan-glow);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* KEYFRAMES */
+    @keyframes reactorSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes pulseGreen {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    @keyframes pulseRed {
+      0% { box-shadow: 0 0 4px var(--crimson); }
+      100% { box-shadow: 0 0 16px var(--crimson); }
+    }
+    @keyframes msgAppear {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hud-frame"></div>
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- TOP HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo"></div>
+      <div class="brand-text">
+        <h1>JARVIS <span class="version">MARK LXXXV</span></h1>
+        <div class="brand-subtitle">Autonomous Modular Intelligence Platform</div>
+      </div>
+    </div>
+
+    <div class="header-telemetry">
+      <div class="telemetry-chip">
+        <span class="label">LOCAL TIME</span>
+        <span class="val" id="telemetry-clock">--:--:--</span>
+      </div>
+      <div class="telemetry-chip">
+        <span class="label">PROVIDER // MODEL</span>
+        <span class="val" id="telemetry-model">GROQ // LLAMA-3.3</span>
+      </div>
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="system-status-text">SYSTEM ONLINE</span>
+      </div>
+      <button class="btn-hud" id="btn-audio-toggle" title="Toggle audio feedback">
+        🔊 AUDIO ON
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main>
+
+    <!-- LEFT COLUMN: ARC REACTOR & DIAGNOSTICS -->
+    <div class="hud-panel">
+      <div class="panel-header">
+        <h2>⚡ ARC REACTOR CORE</h2>
+        <span class="panel-badge">MK-85 POWER</span>
+      </div>
+
+      <div class="reactor-container">
+        <canvas id="arc-reactor" width="220" height="220"></canvas>
+        <div class="reactor-status-text" id="reactor-status">STANDBY MODE</div>
+        <div class="reactor-subtext">Click core to cycle diagnostics</div>
+      </div>
+
+      <div class="gauges-grid">
+        <div class="gauge-card">
+          <div class="gauge-label">
+            <span>CPU CORE</span>
+            <span id="cpu-percent">14%</span>
+          </div>
+          <div class="gauge-val" id="cpu-display">14%</div>
+          <div class="gauge-bar-track">
+            <div class="gauge-bar-fill" id="cpu-bar" style="width: 14%;"></div>
+          </div>
+        </div>
+
+        <div class="gauge-card">
+          <div class="gauge-label">
+            <span>RAM LOAD</span>
+            <span id="ram-percent">42%</span>
+          </div>
+          <div class="gauge-val" id="ram-display">42%</div>
+          <div class="gauge-bar-track">
+            <div class="gauge-bar-fill" id="ram-bar" style="width: 42%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-header" style="border-top: 1px solid rgba(0, 240, 255, 0.15);">
+        <h2>🛠 ACTIVE TOOL MATRIX</h2>
+        <span class="panel-badge">5/5 ARMED</span>
+      </div>
+
+      <div class="tools-section">
+        <div class="tool-row">
+          <div class="tool-info">
+            <div class="tool-indicator"></div>
+            <span class="tool-name">calculator</span>
+          </div>
+          <span class="tool-state">AST WHITELIST</span>
+        </div>
+        <div class="tool-row">
+          <div class="tool-info">
+            <div class="tool-indicator"></div>
+            <span class="tool-name">get_current_datetime</span>
+          </div>
+          <span class="tool-state">CHRONO LIVE</span>
+        </div>
+        <div class="tool-row">
+          <div class="tool-info">
+            <div class="tool-indicator"></div>
+            <span class="tool-name">web_search</span>
+          </div>
+          <span class="tool-state">DUCKDUCKGO</span>
+        </div>
+        <div class="tool-row">
+          <div class="tool-info">
+            <div class="tool-indicator"></div>
+            <span class="tool-name">document_query</span>
+          </div>
+          <span class="tool-state">SQLITE RAG</span>
+        </div>
+        <div class="tool-row">
+          <div class="tool-info">
+            <div class="tool-indicator"></div>
+            <span class="tool-name">elevenlabs_tts</span>
+          </div>
+          <span class="tool-state">ELEVENLABS HD</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER COLUMN: TACTICAL CHAT STREAM -->
+    <div class="hud-panel chat-panel">
+      <div class="panel-header">
+        <h2>COMMUNICATION STREAM // TACTICAL DIALOGUE</h2>
+        <span class="panel-badge" id="session-badge">SESSION #1</span>
+      </div>
+
+      <!-- Messages Feed -->
+      <div class="chat-messages" id="chat-messages">
+        <div class="msg msg-assistant">
+          <div class="msg-meta">
+            <span class="msg-tag">JARVIS // CORE</span>
+            <span>SYSTEM READY</span>
+          </div>
+          <div class="msg-bubble">
+            Good day, sir. Systems are fully calibrated, SQLite persistence is active, and the approved tool matrix is standing by. How may I assist your engineering tasks today?
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Audio Waveform Canvas -->
+      <canvas id="audio-visualizer" height="28"></canvas>
+
+      <!-- Suggested Quick Action Chips -->
+      <div class="quick-chips">
+        <div class="chip" onclick="sendQuickPrompt('Calculate sqrt(144) * 12 and tell me today\'s date')">📐 Math & Date</div>
+        <div class="chip" onclick="sendQuickPrompt('What is the operational status of all registered tools?')">⚡ Tool Telemetry</div>
+        <div class="chip" onclick="sendQuickPrompt('Search the web for latest breakthroughs in artificial intelligence 2026')">🌐 Web Search</div>
+        <div class="chip" onclick="sendQuickPrompt('Remember that I am Senior Architect on Project Aegis')">🧠 Store Preference</div>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="chat-input-bar">
+        <button class="btn-circle" id="btn-mic" title="Voice Input (Speech-to-Text)">
+          🎙
+        </button>
+
+        <div class="chat-input-wrapper">
+          <input 
+            type="text" 
+            class="chat-input" 
+            id="chat-input" 
+            placeholder="Transmit command to JARVIS or query tools..." 
+            autocomplete="off"
+          />
+        </div>
+
+        <button class="btn-send" id="btn-send">
+          TRANSMIT ➔
+        </button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: KNOWLEDGE & MEMORY VAULT -->
+    <div class="right-col">
+      <!-- Document RAG Vault -->
+      <div class="hud-panel" style="flex: 0 0 230px;">
+        <div class="panel-header">
+          <h2>📄 DOCUMENT RAG VAULT</h2>
+          <span class="panel-badge">GROUNDING</span>
+        </div>
+        <div style="padding: 12px; display: flex; flex-direction: column; gap: 10px; height: 100%;">
+          <div class="doc-dropzone" id="doc-dropzone">
+            <input type="file" id="file-input" style="display: none;" accept=".pdf,.docx,.txt,.csv" />
+            <div style="font-size: 1.5rem; color: var(--cyan-bright);">📥</div>
+            <p><strong>Click or Drop File</strong></p>
+            <span class="sub">PDF, DOCX, TXT, CSV (Max 25MB)</span>
+          </div>
+          <div id="upload-status" style="font-family: var(--font-mono); font-size: 0.68rem; color: var(--cyan-bright); text-align: center;"></div>
+        </div>
+      </div>
+
+      <!-- Long Term Memory Bank -->
+      <div class="hud-panel" style="flex: 1;">
+        <div class="panel-header">
+          <h2>🧠 PERSISTENT MEMORY BANK</h2>
+          <span class="panel-badge">SQLITE</span>
+        </div>
+        <div class="memory-list" id="memory-list">
+          <div class="memory-card">
+            <div class="memory-card-header">
+              <span>SYSTEM INITIALIZED</span>
+              <span>LIFELONG</span>
+            </div>
+            <div>Cross-session grounding enabled with SQLite storage.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Configuration & State
+    const API_BASE = window.location.origin.includes('http') && !window.location.origin.includes('file://') 
+      ? window.location.origin 
+      : 'http://127.0.0.1:8000';
+
+    let isAudioEnabled = true;
+    let isSpeaking = false;
+    let isThinking = false;
+    let currentSessionId = null;
+
+    // Web Audio Synthesizer for Zero-Dependency Sci-Fi FX
+    const AudioFX = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      },
+      beep(freq = 880, duration = 0.08, type = 'sine') {
+        if (!isAudioEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      },
+      jarvisChime() {
+        if (!isAudioEnabled) return;
+        this.beep(523.25, 0.08, 'sine');
+        setTimeout(() => this.beep(659.25, 0.08, 'sine'), 60);
+        setTimeout(() => this.beep(1046.50, 0.14, 'triangle'), 120);
+      },
+      reactorPulse() {
+        if (!isAudioEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(110, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(440, this.ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.3);
+      }
+    };
+
+    // Live Clock Ticker
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0').slice(0, 2);
+      document.getElementById('telemetry-clock').textContent = timeStr;
+    }
+    setInterval(updateClock, 50);
+
+    // ARC REACTOR CANVAS ENGINE
+    const reactorCanvas = document.getElementById('arc-reactor');
+    const rCtx = reactorCanvas.getContext('2d');
+    let ringAngle1 = 0;
+    let ringAngle2 = 0;
+    let ringAngle3 = 0;
+    let corePulse = 0;
+
+    function drawArcReactor() {
+      rCtx.clearRect(0, 0, reactorCanvas.width, reactorCanvas.height);
+      const cx = 110, cy = 110;
+
+      // Speed multipliers based on system state
+      const speed = isThinking ? 0.08 : isSpeaking ? 0.04 : 0.015;
+      ringAngle1 += speed;
+      ringAngle2 -= speed * 1.5;
+      ringAngle3 += speed * 0.7;
+      corePulse += 0.05;
+
+      const glowColor = isThinking ? '#ffb703' : isSpeaking ? '#00ff88' : '#00f0ff';
+      const coreIntensity = 0.7 + Math.sin(corePulse) * 0.25;
+
+      // Outer Ring
+      rCtx.save();
+      rCtx.translate(cx, cy);
+      rCtx.rotate(ringAngle1);
+      rCtx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+      rCtx.lineWidth = 2;
+      rCtx.beginPath();
+      rCtx.arc(0, 0, 95, 0, Math.PI * 2);
+      rCtx.stroke();
+
+      // Outer Ring Segments
+      for (let i = 0; i < 12; i++) {
+        const rad = (i * Math.PI * 2) / 12;
+        rCtx.fillStyle = glowColor;
+        rCtx.fillRect(Math.cos(rad) * 92 - 2, Math.sin(rad) * 92 - 2, 4, 4);
+      }
+      rCtx.restore();
+
+      // Mid Mechanical Turbine Ring
+      rCtx.save();
+      rCtx.translate(cx, cy);
+      rCtx.rotate(ringAngle2);
+      rCtx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+      rCtx.lineWidth = 4;
+      for (let i = 0; i < 8; i++) {
+        rCtx.beginPath();
+        rCtx.arc(0, 0, 72, (i * Math.PI) / 4, (i * Math.PI) / 4 + 0.25);
+        rCtx.stroke();
+      }
+      rCtx.restore();
+
+      // Inner Counter-Rotating Ring
+      rCtx.save();
+      rCtx.translate(cx, cy);
+      rCtx.rotate(ringAngle3);
+      rCtx.strokeStyle = glowColor;
+      rCtx.lineWidth = 3;
+      rCtx.beginPath();
+      rCtx.arc(0, 0, 48, 0, Math.PI * 2);
+      rCtx.stroke();
+
+      // Triangular Core Frame
+      rCtx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const angle = (i * Math.PI * 2) / 3;
+        const x = Math.cos(angle) * 36;
+        const y = Math.sin(angle) * 36;
+        if (i === 0) rCtx.moveTo(x, y);
+        else rCtx.lineTo(x, y);
+      }
+      rCtx.closePath();
+      rCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      rCtx.lineWidth = 2;
+      rCtx.stroke();
+      rCtx.restore();
+
+      // Central Glowing Core
+      const grad = rCtx.createRadialGradient(cx, cy, 2, cx, cy, 26);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.4, glowColor);
+      grad.addColorStop(1, 'transparent');
+      rCtx.fillStyle = grad;
+      rCtx.globalAlpha = coreIntensity;
+      rCtx.beginPath();
+      rCtx.arc(cx, cy, 26, 0, Math.PI * 2);
+      rCtx.fill();
+      rCtx.globalAlpha = 1;
+
+      requestAnimationFrame(drawArcReactor);
+    }
+    drawArcReactor();
+
+    // Click Arc Reactor for diagnostic sound & burst
+    reactorCanvas.addEventListener('click', () => {
+      AudioFX.reactorPulse();
+      const status = document.getElementById('reactor-status');
+      status.textContent = 'DIAGNOSTIC CYCLE // NOMINAL';
+      status.style.color = '#00ff88';
+      setTimeout(() => {
+        status.textContent = isThinking ? 'PROCESSING...' : 'STANDBY MODE';
+        status.style.color = 'var(--cyan-bright)';
+      }, 1500);
+    });
+
+    // AUDIO WAVEFORM VISUALIZER CANVAS
+    const waveCanvas = document.getElementById('audio-visualizer');
+    const wCtx = waveCanvas.getContext('2d');
+    let waveStep = 0;
+
+    function drawWaveform() {
+      wCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+      const w = waveCanvas.width;
+      const h = waveCanvas.height;
+      waveStep += 0.08;
+
+      wCtx.strokeStyle = isSpeaking ? '#00ff88' : isThinking ? '#ffb703' : 'rgba(0, 240, 255, 0.4)';
+      wCtx.lineWidth = 1.5;
+      wCtx.beginPath();
+
+      const numBars = 48;
+      const barWidth = w / numBars;
+
+      for (let i = 0; i < numBars; i++) {
+        const amp = isSpeaking 
+          ? Math.abs(Math.sin(waveStep + i * 0.3)) * 12 + 2 
+          : isThinking 
+          ? Math.abs(Math.cos(waveStep * 2 + i * 0.2)) * 6 + 1 
+          : (Math.sin(waveStep * 0.5 + i * 0.1) * 2 + 2);
+
+        const x = i * barWidth;
+        wCtx.moveTo(x, h / 2 - amp);
+        wCtx.lineTo(x, h / 2 + amp);
+      }
+      wCtx.stroke();
+      requestAnimationFrame(drawWaveform);
+    }
+    drawWaveform();
+
+    // Resize handlers
+    function resizeCanvases() {
+      waveCanvas.width = waveCanvas.offsetWidth;
+      waveCanvas.height = waveCanvas.offsetHeight;
+      const bg = document.getElementById('bg-canvas');
+      bg.width = window.innerWidth;
+      bg.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvases);
+    resizeCanvases();
+
+    // SYSTEM STATS POLLING
+    async function pollStats() {
+      try {
+        const res = await fetch(`${API_BASE}/api/system/stats`);
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('cpu-percent').textContent = `${data.cpu.percent}%`;
+          document.getElementById('cpu-display').textContent = `${data.cpu.percent}%`;
+          document.getElementById('cpu-bar').style.width = `${data.cpu.percent}%`;
+
+          document.getElementById('ram-percent').textContent = `${data.memory.percent}%`;
+          document.getElementById('ram-display').textContent = `${data.memory.percent}%`;
+          document.getElementById('ram-bar').style.width = `${data.memory.percent}%`;
+        }
+      } catch (err) {
+        // Degraded mode if backend is not started yet
+      }
+    }
+    setInterval(pollStats, 3000);
+    pollStats();
+
+    // MEMORY VAULT REFRESH
+    async function loadMemories() {
+      try {
+        const res = await fetch(`${API_BASE}/api/memory`);
+        if (res.ok) {
+          const memories = await res.json();
+          const list = document.getElementById('memory-list');
+          if (memories.length > 0) {
+            list.innerHTML = memories.map(m => `
+              <div class="memory-card">
+                <div class="memory-card-header">
+                  <span>${m.category ? m.category.toUpperCase() : 'GENERAL'}</span>
+                  <span>ID #${m.id}</span>
+                </div>
+                <div>${escapeHtml(m.content)}</div>
+              </div>
+            `).join('');
+          }
+        }
+      } catch (err) {}
+    }
+    loadMemories();
+
+    // CHAT MESSAGE DISPATCH
+    async function sendMessage(text) {
+      if (!text || text.trim() === '') return;
+      text = text.trim();
+      const input = document.getElementById('chat-input');
+      input.value = '';
+
+      AudioFX.beep(600, 0.05);
+
+      // Append User Message
+      appendMessage('user', text);
+
+      // Update State: Thinking
+      isThinking = true;
+      document.getElementById('reactor-status').textContent = 'NEURAL PROCESSING...';
+
+      try {
+        const body = {
+          message: text,
+          session_id: currentSessionId,
+          use_memory: true,
+          generate_voice: true
+        };
+
+        const res = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          const detail = errData && errData.detail ? errData.detail : `Server error (HTTP ${res.status})`;
+          throw new Error(detail);
+        }
+
+        const data = await res.json();
+        currentSessionId = data.session_id;
+        document.getElementById('session-badge').textContent = `SESSION #${currentSessionId.slice(0, 8)}`;
+
+        isThinking = false;
+        document.getElementById('reactor-status').textContent = 'RESPONSE RECEIVED';
+
+        // Extract reply text from API schema (reply field)
+        const replyText = data.reply || data.response || "No reply generated.";
+
+        // Extract tool execution names
+        const toolNames = Array.isArray(data.tool_calls) 
+          ? data.tool_calls.map(tc => tc.tool_name || tc.name || tc)
+          : [];
+
+        // Append Assistant Message
+        appendMessage('assistant', replyText, toolNames);
+
+        // Play Sound & ElevenLabs Audio / Fallback
+        AudioFX.jarvisChime();
+        if (data.audio_url) {
+          playAudioUrl(data.audio_url, replyText);
+        } else {
+          speakText(replyText);
+        }
+        loadMemories();
+
+      } catch (err) {
+        isThinking = false;
+        document.getElementById('reactor-status').textContent = 'STANDBY MODE';
+        appendMessage('assistant', `⚠️ Execution Error: ${err.message}. If the server is offline, start it with '.\\run.ps1'. If using a live AI provider, verify LLM_API_KEY in .env.`);
+      }
+    }
+
+    function playAudioUrl(url, fallbackText) {
+      const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
+      const audio = new Audio(fullUrl);
+      isSpeaking = true;
+      document.getElementById('reactor-status').textContent = 'ELEVENLABS VOICE ACTIVE';
+
+      audio.onended = () => {
+        isSpeaking = false;
+        document.getElementById('reactor-status').textContent = 'STANDBY MODE';
+      };
+      audio.onerror = (e) => {
+        console.warn("Audio playback error, falling back to Web Speech:", e);
+        speakText(fallbackText);
+      };
+      audio.play().catch(e => {
+        console.warn("Autoplay blocked, falling back to Web Speech:", e);
+        speakText(fallbackText);
+      });
+    }
+
+    function appendMessage(sender, text, toolCalls = []) {
+      const container = document.getElementById('chat-messages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `msg msg-${sender}`;
+
+      const meta = document.createElement('div');
+      meta.className = 'msg-meta';
+      meta.innerHTML = sender === 'user'
+        ? `<span>${new Date().toLocaleTimeString()}</span><span class="msg-tag">OPERATOR</span>`
+        : `<span class="msg-tag">JARVIS // CORE</span><span>${new Date().toLocaleTimeString()}</span>`;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      bubble.textContent = text;
+
+      if (toolCalls && toolCalls.length > 0) {
+        const toolsDiv = document.createElement('div');
+        toolsDiv.className = 'tool-execution-pill';
+        toolsDiv.innerHTML = `⚙️ <strong>TOOLS ACTIVATED:</strong> ${toolCalls.join(', ')}`;
+        bubble.appendChild(toolsDiv);
+      }
+
+      msgDiv.appendChild(meta);
+      msgDiv.appendChild(bubble);
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // SPEECH SYNTHESIS ENGINE
+    function speakText(text) {
+      if (!isAudioEnabled || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+
+      // Clean markdown tags for natural speech
+      const cleanText = text.replace(/[*_#`]/g, '').slice(0, 300);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = 1.05;
+      utterance.pitch = 0.95;
+
+      isSpeaking = true;
+      utterance.onend = () => {
+        isSpeaking = false;
+        document.getElementById('reactor-status').textContent = 'STANDBY MODE';
+      };
+      utterance.onerror = () => {
+        isSpeaking = false;
+        document.getElementById('reactor-status').textContent = 'STANDBY MODE';
+      };
+
+      // Select high quality UK or English voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const ukVoice = voices.find(v => v.lang.includes('en-GB') || v.name.includes('David') || v.name.includes('Male'));
+      if (ukVoice) utterance.voice = ukVoice;
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // WEB SPEECH RECOGNITION (VOICE INPUT)
+    const micBtn = document.getElementById('btn-mic');
+    let recognition = null;
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        micBtn.classList.add('recording');
+        AudioFX.beep(800, 0.1);
+        document.getElementById('reactor-status').textContent = 'LISTENING...';
+      };
+
+      recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript;
+        document.getElementById('chat-input').value = transcript;
+        sendMessage(transcript);
+      };
+
+      recognition.onend = () => {
+        micBtn.classList.remove('recording');
+        if (!isThinking && !isSpeaking) {
+          document.getElementById('reactor-status').textContent = 'STANDBY MODE';
+        }
+      };
+    }
+
+    micBtn.addEventListener('click', () => {
+      if (!recognition) {
+        alert("Speech Recognition not supported in this browser. Please use Google Chrome or Microsoft Edge.");
+        return;
+      }
+      if (micBtn.classList.contains('recording')) {
+        recognition.stop();
+      } else {
+        recognition.start();
+      }
+    });
+
+    // EVENT LISTENERS
+    document.getElementById('btn-send').addEventListener('click', () => {
+      sendMessage(document.getElementById('chat-input').value);
+    });
+
+    document.getElementById('chat-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage(e.target.value);
+      }
+    });
+
+    document.getElementById('btn-audio-toggle').addEventListener('click', (e) => {
+      isAudioEnabled = !isAudioEnabled;
+      e.target.textContent = isAudioEnabled ? '🔊 AUDIO ON' : '🔇 AUDIO OFF';
+      AudioFX.beep(isAudioEnabled ? 900 : 300, 0.1);
+    });
+
+    function sendQuickPrompt(promptText) {
+      document.getElementById('chat-input').value = promptText;
+      sendMessage(promptText);
+    }
+
+    // DOCUMENT DRAG AND DROP
+    const dropzone = document.getElementById('doc-dropzone');
+    const fileInput = document.getElementById('file-input');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        uploadFile(e.dataTransfer.files[0]);
+      }
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        uploadFile(e.target.files[0]);
+      }
+    });
+
+    async function uploadFile(file) {
+      const statusDiv = document.getElementById('upload-status');
+      statusDiv.textContent = `INDEXING: ${file.name}...`;
+      AudioFX.beep(700, 0.08);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/documents`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        statusDiv.textContent = `INDEXED: ${data.filename} (${data.chunk_count} chunks)`;
+        AudioFX.jarvisChime();
+        appendMessage('assistant', `Document '${data.filename}' successfully ingested into RAG store with ${data.chunk_count} semantic chunks. You may now query its contents.`);
+      } catch (err) {
+        statusDiv.textContent = `UPLOAD ERROR: ${err.message}`;
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>
